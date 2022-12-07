@@ -1,5 +1,7 @@
 import "./style.scss";
-import React, { useState } from "react";
+import React, { useState, createRef, useEffect } from "react";
+import { AvatarLoader } from "./loaders";
+import { useScreenshot } from "use-react-screenshot";
 import {
   LikeIcon,
   ReplyIcon,
@@ -8,7 +10,7 @@ import {
   VerifiedIcon,
 } from "./icons";
 
-// 45:00
+// 1:01:00
 
 const tweetFormat = (tweet) => {
   tweet = tweet
@@ -18,16 +20,48 @@ const tweetFormat = (tweet) => {
   return tweet;
 };
 
+const formatNumber = (number) => {
+  if (!number) {
+    number = 0;
+  }
+  if (number < 1000) {
+    return number;
+  }
+  number /= 1000;
+  number = String(number).split(".");
+  return (
+    number[0] + "," + (number[1] > 100 ? number[1].slice(0, 1) + "B" : " B")
+  );
+};
+
 function App() {
-  const [name, setName] = useState();
-  const [username, setUsername] = useState();
+  const tweetRef = createRef(null);
+  const downloadRef = createRef();
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [isVerified, setIsVerified] = useState(true);
-  const [tweet, setTweet] = useState();
-  const [avatar, setAvatar] = useState();
+  const [tweet, setTweet] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [retweets, setRetweets] = useState(0);
   const [quoteTweets, setQuoteTweets] = useState(0);
   const [likes, setLikes] = useState(0);
+  const [image, takeScreenShot] = useScreenshot();
+  const getImage = () => takeScreenShot(tweetRef.current);
 
+  useEffect(() => {
+    if (image) {
+      downloadRef.current.click();
+    }
+  }, [image]);
+
+  const avatarHandle = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.addEventListener("load", function () {
+      setAvatar(this.result);
+    });
+    reader.readAsDataURL(file);
+  };
   return (
     <>
       <div className="tweet-settings">
@@ -40,7 +74,7 @@ function App() {
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-            ></input>
+            />
           </li>
           <li>
             <label>Kullanıcı Adı</label>
@@ -59,6 +93,15 @@ function App() {
               value={tweet}
               onChange={(e) => setTweet(e.target.value)}
             ></textarea>
+          </li>
+          <li>
+            <label>Avatar</label>
+            <input
+              type="file"
+              className="input"
+              value={name}
+              onChange={avatarHandle}
+            ></input>
           </li>
           <li>
             <label>Retweet</label>
@@ -87,12 +130,22 @@ function App() {
               onChange={(e) => setLikes(e.target.value)}
             ></input>
           </li>
+          <button onClick={getImage}>Oluştur</button>
+          <div className="download-url">
+            {image && (
+              <a ref={downloadRef} href={image} download="tweet.png">
+                Tweeti indir
+              </a>
+            )}
+          </div>
         </ul>
       </div>
       <div className="tweet-container">
-        <div className="tweet">
+        <div className="tweet" ref={tweetRef}>
           <div className="tweet-author">
-            <img src="https://picsum.photos/200/300"></img>
+            {(avatar && <img src="https://picsum.photos/200/300" />) || (
+              <AvatarLoader />
+            )}
             <div>
               <div className="name">
                 {name || "Ad Soyad"}
@@ -111,13 +164,13 @@ function App() {
           </div>
           <div className="tweet-stats">
             <span>
-              <b>{retweets}</b> Retweet
+              <b>{formatNumber(retweets)}</b> Retweet
             </span>
             <span>
-              <b>{quoteTweets}</b> Alıntı Tweetler
+              <b>{formatNumber(quoteTweets)}</b> Alıntı Tweetler
             </span>
             <span>
-              <b>{likes}</b> Beğeni
+              <b>{formatNumber(likes)}</b> Beğeni
             </span>
           </div>
           <div className="tweet-actions">
